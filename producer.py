@@ -2,16 +2,10 @@ import numpy as np
 from kafka import KafkaProducer
 import json
 import time
+import requests
 
+d = requests.get("https://data.messari.io/api/v1/assets?fields=id,slug,symbol,metrics/market_data/price_usd").json()
+print(d)
 p = KafkaProducer(bootstrap_servers=['localhost:9092'])
-i = 0
-while True:
-    v = np.random.uniform(0, 2, 100)
-    data1 = v.tolist()
-    data = {'id': i,
-            'type': 'uni',
-            'data': data1}
-    p.send('test6', json.dumps(data).encode('utf-8'))
-    p.flush()
-    i += 1
-    time.sleep(1)
+p.send('test6', json.dumps(d).encode('utf-8'))
+p.flush()
