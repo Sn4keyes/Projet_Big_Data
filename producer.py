@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from pycoingecko import CoinGeckoAPI
 from kafka import KafkaProducer
 import numpy as np
@@ -6,19 +8,52 @@ import time
 import sys
 
 BROKER = 'localhost:9092'
-TOPIC = 'crypto1'
-list_crypto = ['bitcoin', 'ethereum', 'binancecoin', 'tether', 'solana', 'cardano', 'polkadot', 'dogecoin', 'litecoin']
+TOPIC = 'crypto3'
+list_crypto = [
+    'bitcoin',
+    'ethereum',
+    'binancecoin',
+    'tether',
+    'solana',
+    'cardano',
+    'polkadot',
+    'dogecoin',
+    'litecoin'
+]
+
+def clean_json(json, crypto_name):
+    json_clean = {
+        crypto_name + "_timestamp": [],
+        crypto_name + "_prices": [],
+        crypto_name + "_market_cap": [],
+        crypto_name + "_total_vol": []
+    }
+    js_line = 0
+    for js_col in json:
+        middle_js_line = len(json[js_col][js_line]) // 2
+        for i in json[js_col]:
+            if js_line <= 168:
+                if json[js_col] == json["prices"]:
+                    json_clean[crypto_name + "_timestamp"].extend(json[js_col][js_line][:middle_js_line])
+                    json_clean[crypto_name + "_prices"].extend(json[js_col][js_line][middle_js_line:])
+                elif json[js_col] == json["market_caps"]:
+                    json_clean[crypto_name + "_market_cap"].extend(json[js_col][js_line][middle_js_line:])
+                elif json[js_col] == json["total_volumes"]:
+                    json_clean[crypto_name + "_total_vol"].extend(json[js_col][js_line][middle_js_line:])
+                js_line += 1
+        js_line = 0
+    return json_clean
 
 def producer_bitcoin():
     bitcoin = cg.get_coin_market_chart_by_id(
                 id="bitcoin",
-                tickers=True,
+                tickers=False,
                 vs_currency='usd',
                 include_market_cap=True,
                 days='7'
             )
-    bitcoin["tag"] = "BTC"
-    return bitcoin
+    clean_bitcoin = clean_json(bitcoin, "BTC")
+    return clean_bitcoin
 
 def producer_ethereum():
     ethereum = cg.get_coin_market_chart_by_id(
@@ -27,8 +62,8 @@ def producer_ethereum():
                 include_market_cap=True,
                 days='7'
             )
-    ethereum["tag"] = "ETH"
-    return ethereum
+    clean_ethereum = clean_json(ethereum, "ETH")
+    return clean_ethereum
 
 def producer_binancecoin():
     binancecoin = cg.get_coin_market_chart_by_id(
@@ -37,8 +72,8 @@ def producer_binancecoin():
                     include_market_cap=True,
                     days='7'
                 )
-    binancecoin["tag"] = "BNB"
-    return binancecoin
+    clean_binancecoin = clean_json(binancecoin, "BNB")
+    return clean_binancecoin
 
 def producer_tether():
     tether = cg.get_coin_market_chart_by_id(
@@ -47,8 +82,8 @@ def producer_tether():
                     include_market_cap=True,
                     days='7'
                 )
-    tether["tag"] = "USDT"
-    return tether
+    clean_tether = clean_json(tether, "USDT")
+    return clean_tether
 
 def producer_solana():
     solana = cg.get_coin_market_chart_by_id(
@@ -57,8 +92,8 @@ def producer_solana():
                     include_market_cap=True,
                     days='7'
                 )
-    solana["tag"] = "SOL"
-    return solana
+    clean_solana = clean_json(solana, "SOL")
+    return clean_solana
 
 def producer_cardano():
     cardano = cg.get_coin_market_chart_by_id(
@@ -67,8 +102,8 @@ def producer_cardano():
                     include_market_cap=True,
                     days='7'
                 )
-    cardano["tag"] = "ADA"
-    return cardano
+    clean_cardano = clean_json(cardano, "ADA")
+    return clean_cardano
 
 def producer_polkadot():
     polkadot = cg.get_coin_market_chart_by_id(
@@ -77,8 +112,8 @@ def producer_polkadot():
                     include_market_cap=True,
                     days='7'
                 )
-    polkadot["tag"] = "DOT"
-    return polkadot
+    clean_polkadot = clean_json(polkadot, "DOT")
+    return clean_polkadot
 
 def producer_dogecoin():
     dogecoin = cg.get_coin_market_chart_by_id(
@@ -87,8 +122,8 @@ def producer_dogecoin():
                     include_market_cap=True,
                     days='7'
                 )
-    dogecoin["tag"] = "DOGE"
-    return dogecoin
+    clean_dogecoin = clean_json(dogecoin, "DOGE")
+    return clean_dogecoin
 
 def producer_litecoin():
     litecoin = cg.get_coin_market_chart_by_id(
@@ -97,19 +132,11 @@ def producer_litecoin():
                     include_market_cap=True,
                     days='7'
                 )
-    litecoin["tag"] = "LTC"
-    return litecoin
+    clean_litecoin = clean_json(litecoin, "LTC")
+    return clean_litecoin
 
-if __name__ == "__main__":
-    
-    try:
-        producer = KafkaProducer(bootstrap_servers=BROKER)                                                                         
-    except Exception as e:
-        print(f"ERROR --> {e}")
-        sys.exit(1)
-    
-    cg = CoinGeckoAPI()
-    print("Send data to kafka: OK")
+def call_crypto_api():
+    json_full = {}
     bitcoin = producer_bitcoin()
     ethereum = producer_ethereum()
     binancecoin = producer_binancecoin()
@@ -120,15 +147,29 @@ if __name__ == "__main__":
     dogecoin = producer_dogecoin()
     litecoin = producer_litecoin()
 
+    json_full.update(bitcoin)
+    json_full.update(ethereum)
+    json_full.update(binancecoin)
+    json_full.update(tether)
+    json_full.update(solana)
+    json_full.update(cardano)
+    json_full.update(polkadot)
+    json_full.update(dogecoin)
+    json_full.update(litecoin)
+    return json_full
+
+if __name__ == "__main__":
+    
+    try:
+        producer = KafkaProducer(bootstrap_servers=BROKER)                                                                         
+    except Exception as e:
+        print(f"ERROR --> {e}")
+        sys.exit(1)
+    cg = CoinGeckoAPI()
+    
     # while True:
-    producer.send(TOPIC, json.dumps(bitcoin).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(ethereum).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(binancecoin).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(tether).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(solana).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(cardano).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(polkadot).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(dogecoin).encode('utf-8'))
-    producer.send(TOPIC, json.dumps(litecoin).encode('utf-8'))
+    print("########## Send Data To Kafka: OK ##########")
+    json_full = call_crypto_api()
+    producer.send(TOPIC, json.dumps(json_full).encode('utf-8'))
     producer.flush()
     # sleep(5)

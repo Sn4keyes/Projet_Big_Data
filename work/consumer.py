@@ -1,28 +1,32 @@
 #!/usr/bin/python
 
-from kafka import KafkaConsumer
-import pymongo
-from pymongo import MongoClient
+from pyspark.sql.types import StructType, StructField, FloatType, IntegerType, StringType
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, FloatType, IntegerType 
+from pymongo import MongoClient
+from kafka import KafkaConsumer
 from datetime import datetime
 from pandas.tseries import offsets
+import pymongo
 import pandas as pd
 import json
 import time
 
-
-list_crypto = ['bitcoin', 'ethereum', 'binancecoin', 'tether', 'solana', 'cardano', 'polkadot', 'dogecoin', 'litecoin']
 BROKER = 'kafka:9093'
-TOPIC = 'crypto1'
+TOPIC = 'crypto3'
+list_crypto = [
+    'bitcoin',
+    'ethereum',
+    'binancecoin',
+    'tether',
+    'solana',
+    'cardano',
+    'polkadot',
+    'dogecoin',
+    'litecoin'
+]
 
-def process_msg(msg, spark, post_crypto):
-    df = pd.DataFrame(json.loads(msg.value))
-    spark_df = spark.createDataFrame(df)
-    spark_df.show()
-    print(msg.offset)
-    message = json.loads(msg.value)
-    print(message)
+def post_in_bdd(msg, post_crypto):
+    message = json.loads(msg)
     post_crypto.insert_one(message).inserted_id
 
 def spar_connect():
@@ -30,6 +34,8 @@ def spar_connect():
             .builder    \
             .master('local')    \
             .appName('Crypto')  \
+            .config("spark.mongodb.input.uri", "mongodb://mongo:27017/database.*")  \
+            .config("spark.mongodb.output.uri", "mongodb://mongo:27017/database.*") \
             .config("spark-jars-packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1")  \
             .getOrCreate()
     spark.sparkContext
@@ -48,4 +54,11 @@ if __name__ == "__main__":
     consumer = KafkaConsumer(TOPIC, bootstrap_servers=[BROKER], api_version=(2,6,0))
     spark = spar_connect()
     for msg in consumer:
-        process_msg(msg, spark, post_crypto)
+        print("########## Received Data From Producer : OK ##########")
+        df = pd.DataFrame.from_dict(json.loads(msg.value))
+        print("\nDataFrame Pandas :\n")
+        print(df)
+        spark_df = spark.createDataFrame(df)
+        print("\nDataFrame Spark :\n")
+        spark_df.show(5, False)
+        # post_in_bdd(spark_df, post_crypto)
