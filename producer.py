@@ -8,7 +8,7 @@ import time
 import sys
 
 BROKER = 'localhost:9092'
-TOPIC = 'crypto3'
+TOPIC = 'crypto4'
 list_crypto = [
     'bitcoin',
     'ethereum',
