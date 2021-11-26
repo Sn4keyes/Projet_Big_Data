@@ -31,7 +31,8 @@ def post_in_bdd(spark_df):
 
 def tot_all_crypto(spark_df):
     print("\n########## Total all market cap crypto : ##########")
-    Moyenne_BTC_market_cap = spark_df.agg({'BTC_market_cap': 'mean'}).show()
+    total = {}
+    Moyenne_BTC_market_cap = spark_df.agg({'BTC_market_cap': 'mean'}).collect()
     Moyenne_ETH_market_cap = spark_df.agg({'ETH_market_cap': 'mean'}).show()
     Moyenne_BNB_market_cap = spark_df.agg({'BNB_market_cap': 'mean'}).show()
     Moyenne_USDT_market_cap = spark_df.agg({'USDT_market_cap': 'mean'}).show()
@@ -40,6 +41,9 @@ def tot_all_crypto(spark_df):
     Moyenne_DOT_market_cap = spark_df.agg({'DOT_market_cap': 'mean'}).show()
     Moyenne_DOGE_market_cap = spark_df.agg({'DOGE_market_cap': 'mean'}).show()
     Moyenne_LTC_market_cap = spark_df.agg({'LTC_market_cap': 'mean'}).show()
+    print("moy btc mark cap = ", Moyenne_BTC_market_cap)
+    total.update(total, Moyenne_BTC_market_cap)
+    print(total)
     # notre_cap_tot = Moyenne_BTC_market_cap.collect() + Moyenne_ETH_market_cap.collect() + Moyenne_BNB_market_cap.collect() + Moyenne_USDT_market_cap.collect() + Moyenne_SOL_market_cap.collect() + Moyenne_ADA_market_cap.collect() + Moyenne_DOT_market_cap.collect() + Moyenne_DOGE_market_cap.collect() + Moyenne_LTC_market_cap.collect()
     # print(notre_cap_tot)
 
@@ -127,8 +131,8 @@ def spark_connect():
             .builder    \
             .master('local')    \
             .appName('Crypto')  \
-            .config("spark.mongodb.input.uri", "mongodb://root:root@mongo:27017/crypto.crypto_col?authSource=admin")  \
-            .config("spark.mongodb.output.uri", "mongodb://root:root@mongo:27017/crypto.crypto_col?authSource=admin") \
+            .config("spark.mongodb.input.uri", "mongodb://root:root@mongo:27017/crypto.*?authSource=admin")  \
+            .config("spark.mongodb.output.uri", "mongodb://root:root@mongo:27017/crypto.*?authSource=admin") \
             .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:3.0.0") \
             .config("spark-jars-packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1")  \
             .getOrCreate()
@@ -140,8 +144,10 @@ if __name__ == "__main__":
     try:
         client = MongoClient('mongo', 27017, username = 'root', password = 'root')
         db_crypto = client.crypto
-        crypto_col = db_crypto.posts
+        crypto_col = db_crypto.crypto_col
+        calcul_col = db_crypto.calcul_col
         crypto_col.drop()
+        calcul_col.drop()
         print("########## Création de la base de données ##########")
     except:
         print("Erreur de connexion à MongoDB")
