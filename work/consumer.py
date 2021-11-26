@@ -26,9 +26,8 @@ list_crypto = [
     'litecoin'
 ]
 
-def post_in_bdd(msg, post_crypto):
-    message = json.loads(msg)
-    post_crypto.insert_one(message).inserted_id
+def post_in_bdd(spark_df):
+    spark_df.write.format("mongo").mode("append").option("database","Crypto").option("collection", "crypto_col").save()
 
 def tot_all_crypto(spark_df):
     print("\n########## Total all market cap crypto : ##########")
@@ -41,7 +40,7 @@ def tot_all_crypto(spark_df):
     Moyenne_DOT_market_cap = spark_df.agg({'DOT_market_cap': 'mean'}).show()
     Moyenne_DOGE_market_cap = spark_df.agg({'DOGE_market_cap': 'mean'}).show()
     Moyenne_LTC_market_cap = spark_df.agg({'LTC_market_cap': 'mean'}).show()
-    # notre_cap_tot = Moyenne_BTC_market_cap[0] + Moyenne_ETH_market_cap[0] + Moyenne_BNB_market_cap[0] + Moyenne_USDT_market_cap[0] + Moyenne_SOL_market_cap[0] + Moyenne_ADA_market_cap[0] + Moyenne_DOT_market_cap[0] + Moyenne_DOGE_market_cap[0] + Moyenne_LTC_market_cap[0]
+    # notre_cap_tot = Moyenne_BTC_market_cap.collect() + Moyenne_ETH_market_cap.collect() + Moyenne_BNB_market_cap.collect() + Moyenne_USDT_market_cap.collect() + Moyenne_SOL_market_cap.collect() + Moyenne_ADA_market_cap.collect() + Moyenne_DOT_market_cap.collect() + Moyenne_DOGE_market_cap.collect() + Moyenne_LTC_market_cap.collect()
     # print(notre_cap_tot)
 
 def corr_btc_market_cap_tot_vol(spark_df):
@@ -128,8 +127,9 @@ def spark_connect():
             .builder    \
             .master('local')    \
             .appName('Crypto')  \
-            .config("spark.mongodb.input.uri", "mongodb://mongo:27017/database.*")  \
-            .config("spark.mongodb.output.uri", "mongodb://mongo:27017/database.*") \
+            .config("spark.mongodb.input.uri", "mongodb://root:example@mongo:27017/Crypto.crypto_col?authSource=admin")  \
+            .config("spark.mongodb.output.uri", "mongodb://root:example@mongo:27017/Crypto.crypto_col?authSource=admin") \
+            .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:3.0.0") \
             .config("spark-jars-packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1")  \
             .getOrCreate()
     spark.sparkContext
@@ -138,10 +138,10 @@ def spark_connect():
 if __name__ == "__main__":
 
     try:
-        client = MongoClient('mongo', 27017, username = 'root', password = 'root')
-        db_crypto = client.crypto
-        post_crypto = db_crypto.posts
-        post_crypto.drop()
+        # client = MongoClient('mongo', 27017, username = 'root', password = 'root')
+        # db_crypto = client.crypto
+        # post_crypto = db_crypto.posts
+        # post_crypto.drop()
         print("########## Création de la base de données ##########")
     except:
         print("Erreur de connexion à MongoDB")
@@ -153,6 +153,7 @@ if __name__ == "__main__":
         print("\n########## DataFrame Pandas : ##########\n")
         print(df)
         spark_df = spark.createDataFrame(df)
+        post_in_bdd(spark_df)
         print("\n########## DataFrame Spark : ##########\n")
         spark_df.show(5, False)
         average(spark_df)
@@ -161,4 +162,3 @@ if __name__ == "__main__":
         corr_btc_price(spark_df)
         corr_btc_market_cap_tot_vol(spark_df)
         tot_all_crypto(spark_df)
-        # post_in_bdd(spark_df, post_crypto)
