@@ -78,3 +78,12 @@ services:
     environment:
       - PYSPARK_PYTHON=/usr/bin/python3
       - PYSPARK_DRIVER_PYTHON=ipython3
+  
+  streamlit:
+    ports:
+      - '8501:8501'
+    volumes:
+      - ./work:/home/work
+    environment:
+      - USER_ID=1000
+      - GROUP_ID=1000
