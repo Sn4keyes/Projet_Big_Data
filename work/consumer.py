@@ -13,7 +13,7 @@ import json
 import time
 
 BROKER = 'kafka:9093'
-TOPIC = 'crypto4'
+TOPIC = 'crypto5'
 list_crypto = [
     'bitcoin',
     'ethereum',
@@ -27,7 +27,7 @@ list_crypto = [
 ]
 
 def post_in_bdd(spark_df):
-    spark_df.write.format("mongo").mode("append").option("database","Crypto").option("collection", "crypto_col").save()
+    spark_df.write.format("mongo").mode("append").option("database","crypto").option("collection", "crypto_col").save()
 
 def tot_all_crypto(spark_df):
     print("\n########## Total all market cap crypto : ##########")
@@ -127,8 +127,8 @@ def spark_connect():
             .builder    \
             .master('local')    \
             .appName('Crypto')  \
-            .config("spark.mongodb.input.uri", "mongodb://root:example@mongo:27017/Crypto.crypto_col?authSource=admin")  \
-            .config("spark.mongodb.output.uri", "mongodb://root:example@mongo:27017/Crypto.crypto_col?authSource=admin") \
+            .config("spark.mongodb.input.uri", "mongodb://root:root@mongo:27017/crypto.crypto_col?authSource=admin")  \
+            .config("spark.mongodb.output.uri", "mongodb://root:root@mongo:27017/crypto.crypto_col?authSource=admin") \
             .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:3.0.0") \
             .config("spark-jars-packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.1")  \
             .getOrCreate()
@@ -138,10 +138,10 @@ def spark_connect():
 if __name__ == "__main__":
 
     try:
-        # client = MongoClient('mongo', 27017, username = 'root', password = 'root')
-        # db_crypto = client.crypto
-        # post_crypto = db_crypto.posts
-        # post_crypto.drop()
+        client = MongoClient('mongo', 27017, username = 'root', password = 'root')
+        db_crypto = client.crypto
+        crypto_col = db_crypto.posts
+        crypto_col.drop()
         print("########## Création de la base de données ##########")
     except:
         print("Erreur de connexion à MongoDB")

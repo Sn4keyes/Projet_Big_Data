@@ -1,12 +1,12 @@
 FROM python:3.8
 
 # create destination directory
-RUN mkdir -p /usr/src
-WORKDIR /usr/src
+RUN mkdir -p /home/work
+WORKDIR /home/work
 
 # copy files
-COPY requirements.txt ./
+COPY ../streamlit/requirements.txt ./
 
 RUN pip3 install -r requirements.txt
 
-CMD ["streamlit","run", "app.py"]
+CMD ["streamlit","run", "streamlit_app.py"]
